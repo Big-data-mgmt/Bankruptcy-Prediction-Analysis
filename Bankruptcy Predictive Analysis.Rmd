@@ -1,0 +1,452 @@
+---
+title: "Bankruptcy Predictive Analysis"
+author: "Kalyani Nikure"
+date: "04/05/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal
+The objective of Bankruptcy Predictive Analysis is the development of an assessment model that allows to predict financial condition of an organization by combining different financial ratios and attributes.
+
+* Based on various financial ratios , predict whether the company got bankrupt in the subsequent years or not. 
+
+* Understanding the data and plotting relationship between them.
+
+Note: This is an R Markdown document for our project. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Agenda 
+
+* Get the data
+
+* Data Pre-processing
+
+* Build a model
+
+* Predictions
+
+* Results
+
+## About Data set Used
+For this project, we used data collected from the Emerging Markets Information Service (EMIS), an information database about emerging markets worldwide. The dataset is about bankruptcy forecast of Polish companies. The bankrupt companies were analyzed in the period 2000-2012, while the still operating companies were evaluated from 2007 to 2013.
+Source: https://archive.ics.uci.edu/ml/datasets/Polish+companies+bankruptcy+data
+
+The dataset consists of 43,400 Instances and 64 Attributes in CSV Format.
+
+## Attribute Information
+• Attr1 net profit / total assets
+
+• Attr2 total liabilities / total assets 
+
+• Attr3 working capital / total assets 
+
+• Attr4 current assets / short-term liabilities 
+
+• Attr5 [(cash + short-term securities + receivables - short-term liabilities) / (operating expenses - depreciation)] * 365 
+
+• Attr6 retained earnings / total assets 
+
+• Attr7 EBIT / total assets 
+
+• Attr8 book value of equity / total liabilities 
+
+• Attr9 sales / total assets 
+
+• Attr10 equity / total assets 
+
+• Attr11 (gross profit + extraordinary items + financial expenses) / total assets 
+
+• Attr12 gross profit / short-term liabilities 
+
+• Attr13 (gross profit + depreciation) / sales 
+
+• Attr14 (gross profit + interest) / total assets 
+
+• Attr15 (total liabilities * 365) / (gross profit + depreciation) 
+
+• Attr16 (gross profit + depreciation) / total liabilities 
+
+• Attr17 total assets / total liabilities 
+
+• Attr18 gross profit / total assets 
+
+• Attr19 gross profit / sales 
+
+• Attr20 (inventory * 365) / sales 
+
+• Attr21 sales (n) / sales (n-1) 
+
+• Attr22 profit on operating activities / total assets 
+
+• Attr23 net profit / sales 
+
+• Attr24 gross profit (in 3 years) / total assets 
+
+• Attr25 (equity - share capital) / total assets 
+
+• Attr26 (net profit + depreciation) / total liabilities 
+
+• Attr27 profit on operating activities / financial expenses 
+
+• Attr28 working capital / fixed assets 
+
+• Attr29 logarithm of total assets 
+
+• Attr30 (total liabilities - cash) / sales 
+
+• Attr31 (gross profit + interest) / sales 
+
+• Attr32 (current liabilities * 365) / cost of products sold 
+
+• Attr33 operating expenses / short-term liabilities 
+
+• Attr34 operating expenses / total liabilities 
+
+• Attr35 profit on sales / total assets 
+
+• Attr36 total sales / total assets 
+
+• Attr37 (current assets - inventories) / long-term liabilities 
+
+• Attr38 constant capital / total assets 
+
+• Attr39 profit on sales / sales 
+
+• Attr40 (current assets - inventory - receivables) / short-term liabilities 
+
+• Attr41 total liabilities / ((profit on operating activities + depreciation) * (12/365)) 
+
+• Attr42 profit on operating activities / sales 
+
+• Attr43 rotation receivables + inventory turnover in days 
+
+• Attr44 (receivables * 365) / sales 
+
+• Attr45 net profit / inventory 
+
+• Attr46 (current assets - inventory) / short-term liabilities 
+
+• Attr47 (inventory * 365) / cost of products sold 
+
+• Attr48 EBITDA (profit on operating activities - depreciation) / total assets 
+
+• Attr49 EBITDA (profit on operating activities - depreciation) / sales 
+
+• Attr50 current assets / total liabilities 
+
+• Attr51 short-term liabilities / total assets 
+
+• Attr52 (short-term liabilities * 365) / cost of products sold) 
+
+• Attr53 equity / fixed assets 
+
+• Attr54 constant capital / fixed assets 
+
+• Attr55 working capital 
+
+• Attr56 (sales - cost of products sold) / sales 
+
+• Attr57 (current assets - inventory - short-term liabilities) / (sales - gross profit - depreciation) 
+
+• Attr58 total costs /total sales 
+
+• Attr59 long-term liabilities / equity 
+
+• Attr60 sales / inventory 
+
+• Attr61 sales / receivables 
+
+• Attr62 (short-term liabilities *365) / sales 
+
+• Attr63 sales / short-term liabilities 
+
+• Attr64 sales / fixed assets
+
+## Project Implementation using R Programming Language
+### Import Libraries which are used
+
+```{r}
+library(ROSE)
+library(corrplot)
+library(caret)
+library(C50)
+library(rpart)
+library(rpart.plot)
+library(DMwR2)
+library(class)
+library(mice)
+library(vegan)
+library(leaps)
+library(inTrees)
+library(e1071)
+```
+
+## Reading & Understanding the Data
+
+### Read the Dataset
+
+```{r}
+setwd("C:/Users/nikur/OneDrive/Desktop/02 Introduction to Statistical Learning/R Programming")
+dt <- read.csv("FinancialDataSet - Copy.csv")
+```
+
+### Understand the data
+
+* Using the str(), summary(), head() and tail() functions to get the dimensions and types of attributes in the dataset
+
+* The dataset has 43401 observations and 65 variables
+
+```{r}
+summary(dt)
+head(dt)
+tail(dt)
+dim(dt)
+```
+
+### Verify Data Integrity to Verify the data types assigned to the variables in the dataset
+
+```{r}
+str(dt)
+```
+## Data pre-processing
+
+### Converting columns to numeric values
+
+```{r}
+i <- c(1: 65) 
+dt[ , i] <- apply(dt[ , i], 2,            # Specify own function within apply
+                    function(x) as.numeric(as.character(x)))
+```   
+
+### Check for missing values and scaling them
+
+```{r}
+sum(is.na(dt))
+dt=centralImputation(dt)
+sum(is.na(dt))
+```
+### Check for class imbalance
+
+```{r}
+prop.table(table(dt$class))
+dt_rose <- ROSE(class~ ., data=dt, seed=111)$data
+prop.table(table(dt_rose$class))
+```
+
+### Plot the important plots to understand data distribution
+
+```{r plots,  echo=FALSE}
+par(mfrow = c(2,2))
+
+plot(dt[,"Attr9"],dt[,"Attr10"],xlab="sale / total assets",
+     ylab="equity / total assets",type="p",main="Sales and equity" )
+
+plot(dt[,"Attr18"],dt[,"Attr24"],xlab="gross profit / total assets",
+     ylab="gross profit (in 3 years) / total assets",type="p",main="Gross profit now and in 3 years" )
+
+plot(dt[,"Attr22"],dt[,"Attr7"],xlab="profit on operating activities / total assets ",
+     ylab="EBIT / total assets",type="p",main="EBIT and profit on operating activities" )
+
+plot(dt[,"Attr2"],dt[,"Attr3"],xlab="total liabilities / total assets",
+     ylab="working capital / total assets",type="p",main="Working capital and total liabilities" )
+```
+
+## Selection of important Features and Financial Ratios  
+
+### Find the corelation between the features
+
+```{r correlation, echo=FALSE}
+cat_var="class"
+num_var=setdiff(names(dt),cat_var)
+corrplot(cor(dt_rose[,num_var]), method="shade",type = "full")
+```
+
+### Split the Data into train and test sets
+
+* Use stratified sampling to split the data into train/test sets (70/30)
+
+* Use the createDataPartition() function from the caret package to do stratified sampling
+
+```{r}
+# Set the seed after attaching the caret package
+set.seed(111)
+# The first argument is the imbalanced class reference variable, the second is the proportion to sample
+# Remember to include list = F as the function returns a list otherwise which would not be able to subset a dataframe
+trainIndex <- createDataPartition(dt$class, p = .7, list = F)
+train_data <- dt[trainIndex, ]
+test_data <- dt[-trainIndex, ]
+```
+
+## Best Subset Selection from all the attributes
+
+### Perform regsubsets() to get the best subset
+* Use best subset selection to find the best subset of features among all the attributes
+
+```{r}
+regfit.full = regsubsets(class~., data= train_data, really.big = T)
+reg.summary = summary(regfit.full)
+reg.summary
+```
+
+### Plot the best subset size
+
+* Plot the best subset of features from the method
+
+```{r subset, echo=FALSE}
+plot(reg.summary$cp, type="l", col=4, xlab="# Variables", ylab="Mallow's Cp")
+points(which.min(reg.summary$cp), reg.summary$cp[which.min(reg.summary$cp)], col=4, pch=15, cex=2)
+which.min(reg.summary$cp)
+```
+
+## C5.0 Decision Tree
+### Model the tree
+
+* We will be using Quinlan's C5.0 decision tree algorithm implementation from the C50 package to build our decision tree
+
+```{r}
+vars <- NULL
+for(i in 1:64){
+        vars <- cbind(vars, names(dt)[i])
+}
+
+c5_tree <- C5.0(x = train_data[, vars], y = as.factor(train_data$class))
+# Use the rules = T argument if you want to extract rules later from the model
+c5_rules <- C5.0(x = train_data[, vars], y = as.factor(train_data$class), rules = T)
+```
+
+### Variable Importance in trees
+
+* Find the importance of each variable in the dataset using the c5imp() function
+
+* The default metric "usage" in the c5imp function gives the percentage of data being split by using the attribute at that particular time. So variable used for splitting at the root node always has 100, and the variables at the leaf nodes might be close to 0 if there is no data remaining to classify  
+
+```{r}
+C5imp(c5_tree, metric = "usage")
+```
+
+### Rules from trees
+
+* Understand the summary of the returned c5.0 rules based on the decision tree model
+
+
+```{r}
+summary(c5_rules)
+```
+
+
+* From the output of the summary above, you can clearly understand the rules and their associated metrics such as lift and support
+
+- __This is great for explicability and can also be used for understanding interesting relationships in data, even if your final model is not a decision tree__
+
+### Plotting the tree
+
+* Call the plot function on the tree object to visualize the tree
+
+```{r, fig.width= 70, fig.height=30}
+plot(c5_tree)
+```
+
+
+## Evaluating the C5.0 Decision Tree model
+
+### Predictions on the test data
+
+* We'll evaluate the decision tree using the standard error metrics on test data
+
+```{r}
+preds <- predict(c5_tree, train_data)
+preds1 <- predict(c5_tree, test_data)
+```
+
+### Printing Confusion Matrix for Training and Testing Results
+
+* Error metrics for classification can be accessed through the "confusionMatrix()" function from the caret package
+
+```{r}
+conf_train=confusionMatrix(preds, as.factor(train_data$class))
+conf_test=confusionMatrix(preds1, as.factor(test_data$class))
+# Confusion Matrix for Training dataset
+conf_train
+# Confusion Matrix for Testing dataset
+conf_test
+```
+
+## Finding the F1 score for C5.0 Decision tree
+
+* F1 score is very important to have high precision and recall for this problem and Print F1 score.
+
+```{r}
+F1_score<-function(Recall, Precision)   {
+     F1<-2*Recall*Precision/(Recall+Precision)
+     return(F1)
+}
+recall_test <- sensitivity(preds1, as.factor(test_data$class))
+precision_test <- posPredValue(preds1, as.factor(test_data$class))
+F1_model_c5<-F1_score(recall_test, precision_test)
+print(F1_model_c5)
+```
+
+## CART Trees
+
+* The Classification And Regression Trees (CART) use gini index in place of the gain ratio (based on information gain) used by the ID3 based algorithms, such as c4.5 and c5.0
+
+### Goal
+
+* The goal of this activity is to predict the bankruptcy of a company using a classification and regression tree (CART)
+```{r}
+reg_tree <- rpart(class ~ ., train_data, method='class')
+printcp(reg_tree)
+```
+
+### Tree Explicability
+
+* The variable importance can accessed accessing variable.importance from the reg.tree list
+
+```{r}
+reg_tree$variable.importance
+```
+
+* We can plot the regression tree using the rpart.plot() function from the rpart.plot package
+
+```{r, fig.width=16, fig.height=10}
+rpart.plot(reg_tree)
+```
+## Evaluating the CART model
+
+### Predictions on the test data
+
+* We'll evaluate the decision tree using the standard error metrics on test data
+
+```{r}
+summary(reg_tree) # detailed summary of splits
+pred2 = predict(reg_tree, train_data,type = "class")
+pred3 = predict(reg_tree, test_data,type = "class")
+table(pred2, train_data$class)
+table(pred3, test_data$class)
+```
+### Printing Confusion Matrix for Training and Testing Results
+
+* Error metrics for classification can be accessed through the "confusionMatrix()" function from the caret package
+
+```{r}
+conf_train=confusionMatrix(pred2, as.factor(train_data$class))
+conf_test=confusionMatrix(pred3, as.factor(test_data$class))
+# Confusion Matrix for Training dataset
+conf_train
+# Confusion Matrix for Testing dataset
+conf_test
+```
+
+## Finding the F1 score for the CART tree
+
+* F1 score is very important to have high precision and recall for this problem and Print F1 score.
+
+```{r}
+recall_test <- sensitivity(pred3, as.factor(test_data$class))
+precision_test <- posPredValue(pred3, as.factor(test_data$class))
+F1_model_rpart<-F1_score(recall_test,precision_test)
+print(F1_model_rpart)
+```
